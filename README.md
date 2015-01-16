@@ -20,6 +20,7 @@ Batteries included:
  - Livereload
  - Karma
  - Mocha-Chai-Sinon
+
 Includes Marionette shim for Marionette.Radio instead Wreqr. See: [Deprecation notes](http://marionettejs.com/docs/v2.3.1/marionette.application.html#the-application-channel) and [Backbone.Radio documentation](https://github.com/marionettejs/backbone.radio#using-with-marionette).
 
 Setup
