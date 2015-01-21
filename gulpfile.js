@@ -83,8 +83,9 @@ gulp.task('styles', function () {
 // Scan your HTML for assets & optimize them
 gulp.task('html', ['styles'], function () {
   var lazypipe = require('lazypipe');
+  var minifyCSS = require('gulp-minify-css');
   var cssChannel = lazypipe()
-    .pipe($.csso)
+    .pipe(minifyCSS)
     .pipe($.replace, /'fonts\/glyphicons[.a-z]*/g, '\'../fonts')
   var assets = $.useref.assets({searchPath: '{.tmp,app}'});
 
