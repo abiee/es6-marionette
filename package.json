@@ -8,8 +8,8 @@
     "lodash": "^3.5.0"
   },
   "devDependencies": {
-    "6to5": "^3.6.5",
-    "6to5-loader": "^3.0.0",
+    "babel": "^4.7.8",
+    "babel-loader": "^4.1.0",
     "chai": "^2.1.1",
     "chai-jquery": "^2.0.0",
     "connect": "^3.3.4",

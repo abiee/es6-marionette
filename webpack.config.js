@@ -53,7 +53,7 @@ module.exports = {
   // Module loader configurtion
   module: {
     loaders: [
-      { test: /\.js$/, exclude: /node_modules|bower_components/, loader: '6to5-loader' }
+      { test: /\.js$/, exclude: /node_modules|bower_components/, loader: 'babel-loader' }
     ]
   },
 
