@@ -1,4 +1,4 @@
-import Marionette from 'backbone.marionette';
+import Marionette from 'marionette';
 import layoutTemplate from 'templates/layout';
 
 export default class AppLayout extends Marionette.LayoutView {

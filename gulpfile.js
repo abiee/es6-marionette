@@ -2,11 +2,9 @@
 /* jshint node:true */
 'use strict';
 
-var webpack = require('webpack');
 var karma = require('karma').server;
 var gulp = require('gulp');
 var $ = require('gulp-load-plugins')();
-var webpackConfig = require('./webpack.config');
 
 var AUTOPREFIXER_BROWSERS = [
   'ie >= 10',
@@ -20,33 +18,13 @@ var AUTOPREFIXER_BROWSERS = [
   'bb >= 10'
 ];
 
-
-// Create a Webpack compiler for development
-var DevWebpackCompiler = (function() {
-  var devCompiler;
-
-  function createCompiler() {
-    var conf = Object.create(webpackConfig);
-    conf.devtool = 'source-map';
-    conf.debug = true;
-    conf.watch = true;
-    conf.output.path = '.tmp/scripts';
-    return webpack(conf);
-  }
-
-  return {
-    getWebpack: function() {
-      if (!devCompiler) {
-        devCompiler = createCompiler();
-      }
-      return devCompiler;
-    }
-  }
-})();
-
 // Lint Javascript
 gulp.task('jshint', function () {
-  return gulp.src(['app/scripts/**/*.js', '!app/scripts/vendor/**/*.js'])
+  return gulp.src([
+      'app/scripts/**/*.js',
+      '!app/scripts/config.js',
+      '!app/scripts/vendor/**/*.js'
+  ])
     .pipe($.jshint({ lookup: true }))
     .pipe($.jshint.reporter('jshint-stylish'))
     .pipe($.jshint.reporter('fail'));
@@ -65,7 +43,10 @@ gulp.task('images', function () {
 
 // Copy web fonts to dist
 gulp.task('fonts', function () {
-  return gulp.src(require('main-bower-files')().concat(['app/{,styles/}fonts/**/*']))
+  return gulp.src([
+    'app/{,styles/}fonts/**/*',
+    'jspm_packages/github/twbs/bootstrap@*/fonts/**/*'
+  ])
     .pipe($.filter('**/*.{eot,svg,ttf,woff}'))
     .pipe($.flatten())
     .pipe(gulp.dest('dist/fonts'));
@@ -73,9 +54,7 @@ gulp.task('fonts', function () {
 
 // Compile and automatically prefix stylesheets
 gulp.task('styles', function () {
-  return gulp.src('app/styles/main.less')
-    .pipe($.changed('styles', {extension: '.less'}))
-    .pipe($.less())
+  return gulp.src('app/styles/main.css')
     .pipe($.autoprefixer({browsers: AUTOPREFIXER_BROWSERS}))
     .pipe(gulp.dest('.tmp/styles'));
 });
@@ -90,6 +69,7 @@ gulp.task('html', ['styles'], function () {
   var assets = $.useref.assets({searchPath: '{.tmp,app}'});
 
   return gulp.src('app/*.html')
+    .pipe($.htmlReplace({ js: ['scripts/app.js' ] }))
     .pipe(assets)
     // Concatenate and minify JavaScript
     .pipe($.if('*.js', $.uglify()))
@@ -116,13 +96,10 @@ gulp.task('connect', ['styles'], function () {
   var serveStatic = require('serve-static');
   var serveIndex = require('serve-index');
   var app = require('connect')()
-    .use(DevWebpackCompiler.getWebpack())
     .use(require('connect-livereload')({port: 35729}))
-    .use(serveStatic('.tmp'))
     .use(serveStatic('app'))
-    // paths to bower_components should be relative to the current file
-    // e.g. in app/index.html you should use ../bower_components
-    .use('/bower_components', serveStatic('bower_components'))
+    .use(serveStatic('.tmp'))
+    .use('/jspm_packages', serveStatic('jspm_packages'))
     .use(serveIndex('app'));
 
   require('http').createServer(app)
@@ -133,22 +110,12 @@ gulp.task('connect', ['styles'], function () {
 });
 
 // Minify and compile handlebars templates
-// Handlebars can be loaded with a Webpack loader but without minification
 gulp.task('templates', function () {
   return gulp.src('app/scripts/**/*.hbs')
     .pipe($.minifyHtml())
     .pipe($.handlebars())
     .pipe($.defineModule('commonjs'))
     .pipe(gulp.dest('.tmp/scripts'))
-});
-
-// Pack Javascripts
-gulp.task('webpack', ['templates'], function(callback) {
-  DevWebpackCompiler.getWebpack().run(function(err, stats) {
-    if(err) throw new $.util.PluginError("webpack", err);
-      $.util.log("[webpack]", stats.toString({colors: true}));
-      callback();
-  });
 });
 
 // Copy assets to distribution path
@@ -162,23 +129,17 @@ gulp.task('extras', function () {
   }).pipe(gulp.dest('dist'));
 });
 
-// Pack JavaScript modules for production
-gulp.task('webpack:build', ['templates'], function(callback) {
-  var conf = Object.create(webpackConfig);
+// Transpile ES6 source files into JavaScript
+gulp.task('transpile:app', ['templates'], function() {
+  return gulp.src('app/scripts/**/*.js')
+    .pipe($.babel({ sourceMap: true }))
+    .pipe(gulp.dest('.tmp/scripts'));
+});
 
-  conf.plugins = conf.plugins.concat(
-		new webpack.optimize.DedupePlugin(),
-		new webpack.optimize.UglifyJsPlugin()
-	);
-
-  // run webpack
-	webpack(conf, function(err, stats) {
-		if(err) throw new $.util.PluginError("webpack:build", err);
-		$.util.log("[webpack:build]", stats.toString({
-			colors: true
-		}));
-		callback();
-	});
+// Bundle javascripts
+gulp.task('bundle:app', function() {
+  return gulp.src('')
+    .pipe($.shell('jspm bundle-sfx main dist/scripts/app.js --minify --skip-source-maps'));
 });
 
 // Run karma for development, will watch and reload
@@ -202,7 +163,7 @@ gulp.task('test', function(callback) {
 });
 
 // Run development server environmnet
-gulp.task('serve', ['webpack', 'connect', 'watch'], function () {
+gulp.task('serve', ['connect', 'templates', 'watch'], function () {
   require('opn')('http://localhost:9000');
 });
 
@@ -215,16 +176,23 @@ gulp.task('watch', ['connect'], function () {
     'app/*.html',
     '.tmp/styles/**/*.css',
     '.tmp/scripts/**/*.js',
+    'app/scripts/**/*.js',
     'app/images/**/*'
   ]).on('change', $.livereload.changed);
 
-  gulp.watch('app/scripts/**/*.js', ['webpack']);
-  gulp.watch('app/scripts/**/*.hbs', ['webpack']);
-  gulp.watch('app/styles/**/*.less', ['styles']);
+  gulp.watch('app/scripts/**/*.hbs', ['templates']);
+  gulp.watch('app/styles/**/*.css', ['styles']);
+});
+
+gulp.task('build:app', function(callback) {
+  var runSequence = require('run-sequence');
+  runSequence('transpile:app',
+              'bundle:app',
+              callback);
 });
 
 // Build the project for distribution
-gulp.task('build', ['jshint', 'webpack:build', 'html', 'images', 'fonts', 'extras'], function () {
+gulp.task('build', ['jshint', 'build:app', 'html', 'images', 'fonts', 'extras'], function () {
   var size = $.size({title: 'build', gzip: true })
   return gulp.src('dist/**/*.js')
     .pipe(size)

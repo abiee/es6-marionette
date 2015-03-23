@@ -32,7 +32,9 @@ bower_components
 !.travis.yml
 *~
 
+## jspm ###
+jspm_packages
 
-### Yeoman ###
+### App ###
 dist
 test/temp

@@ -4,22 +4,16 @@
 <!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
     <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-        <title></title>
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title></title>
+      <meta name="description" content="">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <style>
-            body {
-                padding-top: 50px;
-                padding-bottom: 20px;
-            }
-        </style>
-        <!-- build:css(.tmp) styles/main.min.css -->
-        <link rel="stylesheet" href="styles/main.css">
-        <!-- endbuild -->
-        <script src="bower_components/modernizr/modernizr.js"></script>
+      <!-- build:css(.tmp) styles/main.min.css -->
+      <link rel="stylesheet" href="styles/main.css">
+      <link rel="stylesheet" href="../jspm_packages/github/twbs/bootstrap@3.3.4/css/bootstrap.css">
+      <!-- endbuild -->
     </head>
     <body>
         <!--[if lt IE 7]>
@@ -61,13 +55,18 @@
 
     <div id="main" class="container">
     </div> <!-- /container -->
-        <!-- build:js scripts/vendor.min.js -->
-        <script src="../bower_components/jquery/dist/jquery.js"></script>
-        <script src="../bower_components/bootstrap/dist/js/bootstrap.js"></script>
+        <!-- build:js -->
+        <script src="../jspm_packages/system.js"></script>
+        <script src="scripts/config.js"></script>
+        <script>
+          System.import('backbone').then(function(Backbone) {
+            System.import('jquery').then(function() {
+              Backbone.$ = $;
+              System.import('app');
+            });
+          });
+        </script>
         <!-- endbuild -->
-
-        <script src="scripts/core.js"></script>
-        <script src="scripts/app.js"></script>
 
         <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
         <script>

@@ -1,6 +1,5 @@
-/* jshint devel:true  */
-import Marionette from 'backbone.marionette';
-import AppLayout from 'app-layout';
+import Marionette from 'marionette';
+import AppLayout from 'appLayout';
 
 var App = new Marionette.Application();
 
