@@ -5,6 +5,8 @@
 var karma = require('karma').server;
 var gulp = require('gulp');
 var $ = require('gulp-load-plugins')();
+var browserSync = require('browser-sync');
+var reload = browserSync.reload;
 
 var AUTOPREFIXER_BROWSERS = [
   'ie >= 10',
@@ -56,7 +58,8 @@ gulp.task('fonts', function () {
 gulp.task('styles', function () {
   return gulp.src('app/styles/main.css')
     .pipe($.autoprefixer({browsers: AUTOPREFIXER_BROWSERS}))
-    .pipe(gulp.dest('.tmp/styles'));
+    .pipe(gulp.dest('.tmp/styles'))
+    .pipe(reload({ stream: true }));
 });
 
 // Scan your HTML for assets & optimize them
@@ -66,18 +69,15 @@ gulp.task('html', ['styles'], function () {
   var cssChannel = lazypipe()
     .pipe(minifyCSS)
     .pipe($.replace, /'fonts\/glyphicons[.a-z]*/g, '\'../fonts')
-  var assets = $.useref.assets({searchPath: '{.tmp,app}'});
+  var assets = $.useref.assets({ searchPath: ['.tmp', 'app', '.'] });
 
   return gulp.src('app/*.html')
     .pipe($.htmlReplace({ js: ['scripts/app.js' ] }))
     .pipe(assets)
-    // Concatenate and minify JavaScript
     .pipe($.if('*.js', $.uglify()))
-    // Concatenate and minify Styles
     .pipe($.if('*.css', cssChannel()))
     .pipe(assets.restore())
     .pipe($.useref())
-    // Minify any HTML
     .pipe($.if('*.html', $.minifyHtml({conditionals: true, loose: true})))
     .pipe(gulp.dest('dist'))
     .pipe($.size({title: 'html'}));
@@ -89,24 +89,6 @@ gulp.task('clean', function (callback) {
   del(['.tmp', 'dist'], function () {
     $.cache.clearAll(callback);
   });
-});
-
-// Run connect server
-gulp.task('connect', ['styles'], function () {
-  var serveStatic = require('serve-static');
-  var serveIndex = require('serve-index');
-  var app = require('connect')()
-    .use(require('connect-livereload')({port: 35729}))
-    .use(serveStatic('app'))
-    .use(serveStatic('.tmp'))
-    .use('/jspm_packages', serveStatic('jspm_packages'))
-    .use(serveIndex('app'));
-
-  require('http').createServer(app)
-    .listen(9000)
-    .on('listening', function () {
-      console.log('Started connect web server on http://localhost:9000');
-    });
 });
 
 // Minify and compile handlebars templates
@@ -122,8 +104,7 @@ gulp.task('templates', function () {
 gulp.task('extras', function () {
   return gulp.src([
     'app/*.*',
-    '!app/*.html',
-    'node_modules/apache-server-configs/dist/.htaccess'
+    '!app/*.html'
   ], {
     dot: true
   }).pipe(gulp.dest('dist'));
@@ -163,27 +144,45 @@ gulp.task('test', function(callback) {
 });
 
 // Run development server environmnet
-gulp.task('serve', ['connect', 'templates', 'watch'], function () {
-  require('opn')('http://localhost:9000');
-});
-
-// Watch files for changes & reload
-gulp.task('watch', ['connect'], function () {
-  $.livereload.listen();
+gulp.task('serve', ['styles', 'templates'], function () {
+  browserSync({
+    notify: false,
+    port: 9000,
+    ui: {
+      port: 9001
+    },
+    server: {
+      baseDir: ['.tmp', 'app'],
+      routes: {
+        '/jspm_packages': 'jspm_packages'
+      }
+    }
+  });
 
   // watch for changes
   gulp.watch([
     'app/*.html',
-    '.tmp/styles/**/*.css',
-    '.tmp/scripts/**/*.js',
     'app/scripts/**/*.js',
-    'app/images/**/*'
-  ]).on('change', $.livereload.changed);
+    'app/images/**/*',
+    '.tmp/scripts/**/*.js',
+  ]).on('change', reload);
 
   gulp.watch('app/scripts/**/*.hbs', ['templates']);
   gulp.watch('app/styles/**/*.css', ['styles']);
 });
 
+// Run web server on distribution files
+gulp.task('serve:dist', function() {
+  browserSync({
+    notify: false,
+    port: 9000,
+    server: {
+      baseDir: ['dist']
+    }
+  });
+});
+
+// Transpile, bundle and minify app files
 gulp.task('build:app', function(callback) {
   var runSequence = require('run-sequence');
   runSequence('transpile:app',
@@ -194,7 +193,7 @@ gulp.task('build:app', function(callback) {
 // Build the project for distribution
 gulp.task('build', ['jshint', 'build:app', 'html', 'images', 'fonts', 'extras'], function () {
   var size = $.size({title: 'build', gzip: true })
-  return gulp.src('dist/**/*.js')
+  return gulp.src('dist/**/*')
     .pipe(size)
     .pipe($.notify({
       onLast: true,
