@@ -8,18 +8,6 @@ var $ = require('gulp-load-plugins')();
 var browserSync = require('browser-sync');
 var reload = browserSync.reload;
 
-var AUTOPREFIXER_BROWSERS = [
-  'ie >= 10',
-  'ie_mob >= 10',
-  'ff >= 30',
-  'chrome >= 34',
-  'safari >= 7',
-  'opera >= 23',
-  'ios >= 7',
-  'android >= 4.4',
-  'bb >= 10'
-];
-
 // Lint Javascript
 gulp.task('jshint', function () {
   return gulp.src([
@@ -27,9 +15,10 @@ gulp.task('jshint', function () {
       '!app/scripts/config.js',
       '!app/scripts/vendor/**/*.js'
   ])
-    .pipe($.jshint({ lookup: true }))
+    .pipe(reload({stream: true, once: true}))
+    .pipe($.jshint())
     .pipe($.jshint.reporter('jshint-stylish'))
-    .pipe($.jshint.reporter('fail'));
+    .pipe($.if(!browserSync.active, $.jshint.reporter('fail')));
 });
 
 // Optimize images
@@ -49,7 +38,6 @@ gulp.task('fonts', function () {
     'app/{,styles/}fonts/**/*',
     'jspm_packages/github/twbs/bootstrap@*/fonts/**/*'
   ])
-    .pipe($.filter('**/*.{eot,svg,ttf,woff}'))
     .pipe($.flatten())
     .pipe(gulp.dest('dist/fonts'));
 });
@@ -57,30 +45,28 @@ gulp.task('fonts', function () {
 // Compile and automatically prefix stylesheets
 gulp.task('styles', function () {
   return gulp.src('app/styles/main.css')
-    .pipe($.autoprefixer({browsers: AUTOPREFIXER_BROWSERS}))
+    .pipe($.sourcemaps.init())
+    .pipe($.postcss([
+      require('autoprefixer-core')({browsers: ['last 1 version']})
+    ]))
+    .pipe($.sourcemaps.write())
     .pipe(gulp.dest('.tmp/styles'))
     .pipe(reload({ stream: true }));
 });
 
 // Scan your HTML for assets & optimize them
 gulp.task('html', ['styles'], function () {
-  var lazypipe = require('lazypipe');
-  var minifyCSS = require('gulp-minify-css');
-  var cssChannel = lazypipe()
-    .pipe(minifyCSS)
-    .pipe($.replace, /'fonts\/glyphicons[.a-z]*/g, '\'../fonts')
   var assets = $.useref.assets({ searchPath: ['.tmp', 'app', '.'] });
 
   return gulp.src('app/*.html')
     .pipe($.htmlReplace({ js: ['scripts/app.js' ] }))
     .pipe(assets)
     .pipe($.if('*.js', $.uglify()))
-    .pipe($.if('*.css', cssChannel()))
+    .pipe($.if('*.css', $.csso()))
     .pipe(assets.restore())
     .pipe($.useref())
-    .pipe($.if('*.html', $.minifyHtml({conditionals: true, loose: true})))
-    .pipe(gulp.dest('dist'))
-    .pipe($.size({title: 'html'}));
+    .pipe($.if('*.html', $.minifyHtml({ conditionals: true, loose: true })))
+    .pipe(gulp.dest('dist'));
 });
 
 // Clean output directory and cached images
