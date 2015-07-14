@@ -15,7 +15,7 @@
       "bootstrap": "github:twbs/bootstrap@^3.3.5",
       "handlebars": "github:components/handlebars.js@^3.0.3",
       "jquery": "github:components/jquery@^2.1.4",
-      "marionette": "github:marionettejs/backbone.marionette@^2.4.1",
+      "marionette": "github:marionettejs/backbone.marionette@^2.4.2",
       "underscore": "npm:underscore@^1.8.3"
     },
     "devDependencies": {
