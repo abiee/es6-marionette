@@ -2,11 +2,63 @@
 /* jshint node:true */
 'use strict';
 
-var karma = require('karma').server;
+var KarmaServer = require('karma').Server;
 var gulp = require('gulp');
 var $ = require('gulp-load-plugins')();
+var browserify = require('browserify');
+var watchify = require('watchify');
+var babelify = require('babelify');
+var hbsfy = require('hbsfy');
+var source = require('vinyl-source-stream');
+var buffer = require('vinyl-buffer');
 var browserSync = require('browser-sync');
 var reload = browserSync.reload;
+
+// Bundle files with browserify
+gulp.task('browserify', function () {
+  // set up the browserify instance on a task basis
+  var bundler = browserify({
+    entries: 'app/scripts/app.js',
+    debug: true,
+    // defining transforms here will avoid crashing your stream
+    transform: [babelify, hbsfy]
+  });
+
+  bundler = watchify(bundler);
+
+  var rebundle = function() {
+    return bundler.bundle()
+      .on('error', $.util.log)
+      .pipe(source('app.js'))
+      .pipe(buffer())
+      .pipe($.sourcemaps.init({loadMaps: true}))
+        // Add transformation tasks to the pipeline here.
+        .on('error', $.util.log)
+      .pipe($.sourcemaps.write('./'))
+      .pipe(gulp.dest('.tmp/scripts'));
+  }
+
+  bundler.on('update', rebundle);
+
+  return rebundle();
+});
+
+// Bundle files with browserify for production
+gulp.task('browserify:dist', function () {
+  // set up the browserify instance on a task basis
+  var bundler = browserify({
+    entries: 'app/scripts/app.js',
+    // defining transforms here will avoid crashing your stream
+    transform: [babelify, hbsfy]
+  });
+
+  return bundler.bundle()
+    .on('error', $.util.log)
+    .pipe(source('app.js'))
+    .pipe(buffer())
+    .pipe($.uglify())
+    .pipe(gulp.dest('dist/scripts'));
+});
 
 // Lint Javascript
 gulp.task('jshint', function () {
@@ -47,7 +99,7 @@ gulp.task('styles', function () {
   return gulp.src('app/styles/main.css')
     .pipe($.sourcemaps.init())
     .pipe($.postcss([
-      require('autoprefixer-core')({browsers: ['last 1 version']})
+      require('autoprefixer')({browsers: ['last 1 version']})
     ]))
     .pipe($.sourcemaps.write())
     .pipe(gulp.dest('.tmp/styles'))
@@ -56,16 +108,17 @@ gulp.task('styles', function () {
 
 // Scan your HTML for assets & optimize them
 gulp.task('html', ['styles'], function () {
-  var assets = $.useref.assets({ searchPath: ['.tmp', 'app', '.'] });
+  var assets = $.useref.assets({
+    searchPath: ['.tmp', 'app', '.']
+  });
 
   return gulp.src('app/*.html')
-    .pipe($.htmlReplace({ js: ['scripts/app.js' ] }))
+    .pipe($.htmlReplace())
     .pipe(assets)
-    .pipe($.if('*.js', $.uglify()))
     .pipe($.if('*.css', $.csso()))
     .pipe(assets.restore())
     .pipe($.useref())
-    .pipe($.if('*.html', $.minifyHtml({ conditionals: true, loose: true })))
+    .pipe($.if('*.html', $.minifyHtml({conditionals: true, loose: true})))
     .pipe(gulp.dest('dist'));
 });
 
@@ -75,15 +128,6 @@ gulp.task('clean', function (callback) {
   del(['.tmp', 'dist'], function () {
     $.cache.clearAll(callback);
   });
-});
-
-// Minify and compile handlebars templates
-gulp.task('templates', function () {
-  return gulp.src('app/scripts/**/*.hbs')
-    .pipe($.minifyHtml())
-    .pipe($.handlebars())
-    .pipe($.defineModule('commonjs'))
-    .pipe(gulp.dest('.tmp/scripts'))
 });
 
 // Copy assets to distribution path
@@ -96,41 +140,32 @@ gulp.task('extras', function () {
   }).pipe(gulp.dest('dist'));
 });
 
-// Transpile ES6 source files into JavaScript
-gulp.task('transpile:app', ['templates'], function() {
-  return gulp.src('app/scripts/**/*.js')
-    .pipe($.babel({ sourceMap: true }))
-    .pipe(gulp.dest('.tmp/scripts'));
-});
-
-// Bundle javascripts
-gulp.task('bundle:app', function() {
-  return gulp.src('')
-    .pipe($.shell('jspm bundle-sfx main dist/scripts/app.js --minify --skip-source-maps'));
-});
-
 // Run karma for development, will watch and reload
 gulp.task('tdd', function(callback) {
-  karma.start({
+  var karma = new KarmaServer({
     configFile: __dirname + '/karma.conf.js'
   }, callback);
+
+  karma.start();
 });
 
 // Run tests and report for ci
 gulp.task('test', function(callback) {
-  karma.start({
+  var karma = new KarmaServer({
     configFile: __dirname + '/karma.conf.js',
     singleRun: true,
     browsers: ['PhantomJS'],
     reporters: ['dots', 'junit'],
     junitReporter: {
-      outputFile: '.tmp/test-results.xml',
+      outputFile: '.tmp/test-results.xml'
     }
   }, callback);
+
+  karma.start();
 });
 
 // Run development server environmnet
-gulp.task('serve', ['styles', 'templates'], function () {
+gulp.task('serve', ['styles', 'browserify'], function () {
   browserSync({
     notify: false,
     port: 9000,
@@ -140,7 +175,7 @@ gulp.task('serve', ['styles', 'templates'], function () {
     server: {
       baseDir: ['.tmp', 'app'],
       routes: {
-        '/jspm_packages': 'jspm_packages'
+        '/node_modules': 'node_modules'
       }
     }
   });
@@ -153,7 +188,6 @@ gulp.task('serve', ['styles', 'templates'], function () {
     '.tmp/scripts/**/*.js',
   ]).on('change', reload);
 
-  gulp.watch('app/scripts/**/*.hbs', ['templates']);
   gulp.watch('app/styles/**/*.css', ['styles']);
 });
 
@@ -163,21 +197,16 @@ gulp.task('serve:dist', function() {
     notify: false,
     port: 9000,
     server: {
-      baseDir: ['dist']
+      baseDir: ['dist'],
+      routes: {
+        '/node_modules': 'node_modules'
+      }
     }
   });
 });
 
-// Transpile, bundle and minify app files
-gulp.task('build:app', function(callback) {
-  var runSequence = require('run-sequence');
-  runSequence('transpile:app',
-              'bundle:app',
-              callback);
-});
-
 // Build the project for distribution
-gulp.task('build', ['jshint', 'build:app', 'html', 'images', 'fonts', 'extras'], function () {
+gulp.task('build', ['jshint', 'browserify:dist', 'html', 'images', 'fonts', 'extras'], function () {
   var size = $.size({title: 'build', gzip: true })
   return gulp.src('dist/**/*')
     .pipe(size)

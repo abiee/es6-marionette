@@ -8,8 +8,8 @@ What's inside
 ----------------
 Batteries included:
  - Gulp
- - jspm
- - Babel
+ - Browserify
+ - Babelify
  - Bootstrap
  - jQuery
  - Underscore
@@ -29,7 +29,6 @@ Clone the repository and install the dependencies.
     $ git clone https://github.com/abiee/es6-marionette.git my-project
     $ cd my-project
     $ npm install
-    $ jspm install
     $ gulp serve
 
 Do not forget to install globally gulp if not installed yet.

@@ -13,30 +13,25 @@ module.exports = function(config) {
     basePath: '',
 
     // testing framework to use (jasmine/mocha/qunit/...)
-    frameworks: ['mocha', 'chai-sinon', 'jquery-chai', 'fixture'],
+    frameworks: ['mocha', 'browserify', 'chai-sinon', 'jquery-chai'],
 
     // list of files / patterns to load in the browser
     files: [
-      'bower_components/handlebars/handlebars.js',
-      'bower_components/jquery/dist/jquery.js',
-      'test/spec/fixtures/**/*',
-      'test/index.js'
+      'test/**/*Spec.js'
     ],
 
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocesso
     preprocessors: {
-	    'test/*': ['webpack'],
-      'test/spec/fixtures/**/*.html': ['html2js'],
-      'test/spec/fixtures/**/*.json': ['html2js']
-	  },
+      'test/**/*Spec.js': ['browserify']
+    },
 
-    webpack: _.omit(require('./webpack.config'), 'entry', 'plugins'),
-    webpackMiddleware: {
-  		stats: {
-			  colors: true
-		  }
-	  },
+    // Cobfigure how to bundle the test files with Browserify
+    browserify: {
+      paths: ['app/scripts'],
+      transform: ['babelify', 'hbsfy'],
+      extensions: ['.js', '.hbs']
+    },
 
     // report on console and growl if available
     //
@@ -74,12 +69,10 @@ module.exports = function(config) {
 
     // Which plugins to enable
     plugins: [
-      'karma-webpack',
+      'karma-browserify',
       'karma-mocha',
       'karma-chai-sinon',
       'karma-jquery-chai',
-      'karma-fixture',
-      'karma-html2js-preprocessor',
       'karma-spec-reporter',
       'karma-growl',
       'karma-junit-reporter',
