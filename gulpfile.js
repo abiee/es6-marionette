@@ -1,5 +1,5 @@
-
 /* jshint node:true */
+
 'use strict';
 
 var KarmaServer = require('karma').Server;
@@ -88,7 +88,7 @@ gulp.task('images', function () {
 gulp.task('fonts', function () {
   return gulp.src([
     'app/{,styles/}fonts/**/*',
-    'jspm_packages/github/twbs/bootstrap@*/fonts/**/*'
+    'node_modules/bootstrap/dist/fonts/**/*'
   ])
     .pipe($.flatten())
     .pipe(gulp.dest('dist/fonts'));
