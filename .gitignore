@@ -24,8 +24,8 @@ bower_components
 ### Linux ###
 .*
 !.gitignore
-!.bowerrc
 !.git*
+!.babelrc
 !.editorconfig
 !.jshintrc
 !.npmignore
