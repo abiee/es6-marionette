@@ -17,10 +17,6 @@ results
 npm-debug.log
 node_modules
 
-### Bower ###
-bower_components
-
-
 ### Linux ###
 .*
 !.gitignore
@@ -32,9 +28,6 @@ bower_components
 !.travis.yml
 *~
 
-## jspm ###
-jspm_packages
-
 ### App ###
 dist
-test/temp
+.tmp

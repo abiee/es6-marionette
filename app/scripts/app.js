@@ -1,5 +1,5 @@
 import Marionette from 'backbone.marionette';
-import AppLayout from './appLayout';
+import AppLayout from './AppLayout';
 
 var App = new Marionette.Application();
 

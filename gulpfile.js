@@ -185,7 +185,7 @@ gulp.task('serve', ['styles', 'browserify'], function () {
     'app/*.html',
     'app/scripts/**/*.js',
     'app/images/**/*',
-    '.tmp/scripts/**/*.js',
+    '.tmp/scripts/**/*.js'
   ]).on('change', reload);
 
   gulp.watch('app/styles/**/*.css', ['styles']);
