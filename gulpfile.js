@@ -1,4 +1,4 @@
-/* jshint node:true */
+/*eslint-env node*/
 
 'use strict';
 
@@ -61,16 +61,16 @@ gulp.task('browserify:dist', function () {
 });
 
 // Lint Javascript
-gulp.task('jshint', function () {
+gulp.task('lint', function () {
   return gulp.src([
       'app/scripts/**/*.js',
       '!app/scripts/config.js',
       '!app/scripts/vendor/**/*.js'
   ])
     .pipe(reload({stream: true, once: true}))
-    .pipe($.jshint())
-    .pipe($.jshint.reporter('jshint-stylish'))
-    .pipe($.if(!browserSync.active, $.jshint.reporter('fail')));
+    .pipe($.eslint())
+    .pipe($.eslint.format())
+    .pipe($.eslint.failAfterError());
 });
 
 // Optimize images
@@ -108,16 +108,10 @@ gulp.task('styles', function () {
 
 // Scan your HTML for assets & optimize them
 gulp.task('html', ['styles'], function () {
-  var assets = $.useref.assets({
-    searchPath: ['.tmp', 'app', '.']
-  });
-
   return gulp.src('app/*.html')
     .pipe($.htmlReplace())
-    .pipe(assets)
-    .pipe($.if('*.css', $.csso()))
-    .pipe(assets.restore())
     .pipe($.useref())
+    .pipe($.if('*.css', $.csso()))
     .pipe($.if('*.html', $.minifyHtml({conditionals: true, loose: true})))
     .pipe(gulp.dest('dist'));
 });
@@ -206,7 +200,7 @@ gulp.task('serve:dist', function() {
 });
 
 // Build the project for distribution
-gulp.task('build', ['jshint', 'browserify:dist', 'html', 'images', 'fonts', 'extras'], function () {
+gulp.task('build', ['lint', 'browserify:dist', 'html', 'images', 'fonts', 'extras'], function () {
   var size = $.size({title: 'build', gzip: true })
   return gulp.src('dist/**/*')
     .pipe(size)
