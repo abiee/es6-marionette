@@ -21,7 +21,9 @@ gulp.task('browserify', function () {
     entries: 'app/scripts/app.js',
     debug: true,
     // defining transforms here will avoid crashing your stream
-    transform: [babelify, hbsfy]
+    transform: [babelify.configure({
+      presets: ["es2015", "stage-0"]
+    }), hbsfy]
   });
 
   bundler = watchify(bundler);
