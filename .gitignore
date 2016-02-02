@@ -27,7 +27,7 @@ node_modules
 !.npmignore
 !.travis.yml
 *~
-
+*.iml
 ### App ###
 dist
 .tmp
