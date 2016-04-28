@@ -23,7 +23,7 @@ node_modules
 !.git*
 !.babelrc
 !.editorconfig
-!.jshintrc
+!.eslintrc.json
 !.npmignore
 !.travis.yml
 *~
