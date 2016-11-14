@@ -5,6 +5,9 @@
 var KarmaServer = require('karma').Server;
 var gulp = require('gulp');
 var $ = require('gulp-load-plugins')();
+var data = require('gulp-data');
+var sourcemaps = require('gulp-sourcemaps');
+var stylus = require('gulp-stylus');
 var browserify = require('browserify');
 var watchify = require('watchify');
 var babelify = require('babelify');
@@ -94,20 +97,99 @@ gulp.task('fonts', function () {
     .pipe(gulp.dest('dist/fonts'));
 });
 
-// Compile and automatically prefix stylesheets
-gulp.task('styles', function () {
-  return gulp.src('app/styles/main.css')
-    .pipe($.sourcemaps.init())
-    .pipe($.postcss([
-      require('autoprefixer')({browsers: ['last 1 version']})
-    ]))
-    .pipe($.sourcemaps.write())
+
+// -------------------- Start Stylus Section -------------------------
+
+// Taken from https://www.npmjs.com/package/gulp-stylus
+
+// Get one .styl file and render
+gulp.task('one', function () {
+  return gulp.src('app/stylus/main.styl')
+    .pipe(stylus())
+    .pipe(gulp.dest('.tmp/styles'));
+});
+
+// Options
+// Options compress
+gulp.task('compress', function () {
+  return gulp.src('app/stylus/compressed.styl')
+    .pipe(stylus({
+      compress: true
+    }))
+    .pipe(gulp.dest('.tmp/styles'));
+});
+
+
+// Set linenos
+gulp.task('linenos', function () {
+  return gulp.src('app/stylus/linenos.styl')
+    .pipe(stylus({linenos: true}))
+    .pipe(gulp.dest('.tmp/styles'));
+});
+
+// Include css
+// Stylus has an awkward and perplexing 'include css' option
+gulp.task('include-css', function() {
+  return gulp.src('app/stylus/*.styl')
+    .pipe(stylus({
+      'include css': true
+    }))
+    .pipe(gulp.dest('./'));
+
+});
+
+// Inline sourcemaps
+gulp.task('sourcemaps-inline', function () {
+  return gulp.src('app/stylus/sourcemaps-inline.styl')
+    .pipe(sourcemaps.init())
+    .pipe(stylus())
+    .pipe(sourcemaps.write())
+    .pipe(gulp.dest('.tmp/styles'));
+});
+
+// External sourcemaps
+gulp.task('sourcemaps-external', function () {
+  return gulp.src('app/stylus/sourcemaps-external.styl')
+    .pipe(sourcemaps.init())
+    .pipe(stylus())
+    .pipe(sourcemaps.write('.'))
+    .pipe(gulp.dest('.tmp/styles'));
+});
+
+// Pass an object in raw form to be accessable in stylus
+var data = {red: '#ff0000'};
+gulp.task('pass-object', function () {
+  gulp.src('app/stylus/main.styl')
+    .pipe(stylus({ rawDefine: { data: data }}))
     .pipe(gulp.dest('.tmp/styles'))
     .pipe(reload({ stream: true }));
 });
 
+// Use with gulp-data
+gulp.task('gulp-data', function() {
+  gulp.src('app/**/*.styl')
+    .pipe(data(function(){
+      return {
+        componentPath: '/' + (file.path.replace(file.base, '').replace(/\/[^\/]*$/, ''))
+      };
+    }))
+    .pipe(stylus())
+    .pipe(gulp.dest('.tmp/styles'))
+    .pipe(reload({ stream: true }));
+});
+
+/* Ex:
+body
+  color: data.red;
+*/
+
+// Default gulp task to run
+gulp.task('stylus', ['one', 'compress', 'linenos', 'sourcemaps-inline', 'sourcemaps-external', 'pass-object']);
+
+// -------------------- End Stylus Section -------------------------
+
 // Scan your HTML for assets & optimize them
-gulp.task('html', ['styles'], function () {
+gulp.task('html', ['stylus'], function () {
   return gulp.src('app/*.html')
     .pipe($.htmlReplace())
     .pipe($.useref())
@@ -159,7 +241,7 @@ gulp.task('test', function(callback) {
 });
 
 // Run development server environmnet
-gulp.task('serve', ['styles', 'browserify'], function () {
+gulp.task('serve', ['stylus', 'browserify'], function () {
   browserSync({
     notify: false,
     port: 9000,
@@ -182,7 +264,7 @@ gulp.task('serve', ['styles', 'browserify'], function () {
     '.tmp/scripts/**/*.js'
   ]).on('change', reload);
 
-  gulp.watch('app/styles/**/*.css', ['styles']);
+  gulp.watch('app/stylus/**/*.styl', ['stylus']);
 });
 
 // Run web server on distribution files
